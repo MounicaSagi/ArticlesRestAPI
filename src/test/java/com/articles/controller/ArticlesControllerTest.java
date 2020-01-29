@@ -2,6 +2,7 @@ package com.articles.controller;
 
 import com.articles.model.Article;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,8 +37,13 @@ public class ArticlesControllerTest {
     @Autowired
     MockMvc mockMvc;
 
-    private String a = "asdf";
+    @Autowired
+    ArticlesDB articlesDB;
 
+    @AfterEach
+    public void reset() {
+        articlesDB.emptyArticles();
+    }
     @Test
     public void shouldReturn204WhenArticlesPostedSuccessfully() throws Exception {
         String requestBody = "{\n" +
@@ -52,9 +58,9 @@ public class ArticlesControllerTest {
                 .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/articles"))
-                .andExpect(jsonPath("$.title", is("New Spring")))
-                .andExpect(jsonPath("$.content", is("There is a new spring application released by master, it is amazing")))
-                .andExpect(jsonPath("$.tags").isNotEmpty())
+                .andExpect(jsonPath("$[0].title", is("New Spring")))
+                .andExpect(jsonPath("$[0].content", is("There is a new spring application released by master, it is amazing")))
+                .andExpect(jsonPath("$[0].tags").isNotEmpty())
                 .andExpect(status().isOk());
     }
 
@@ -72,9 +78,9 @@ public class ArticlesControllerTest {
                 .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/articles"))
-                .andExpect(jsonPath("$.title", is("New Rails")))
-                .andExpect(jsonPath("$.content", is("There is a Rails application released by master, it is amazing")))
-                .andExpect(jsonPath("$.tags", is(Arrays.asList("master", "Rails"))))
+                .andExpect(jsonPath("$[0].title", is("New Rails")))
+                .andExpect(jsonPath("$[0].content", is("There is a Rails application released by master, it is amazing")))
+                .andExpect(jsonPath("$[0].tags", is(Arrays.asList("master", "Rails"))))
                 .andExpect(status().isOk());
     }
 
@@ -92,9 +98,9 @@ public class ArticlesControllerTest {
                 .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/articles"))
-                .andExpect(jsonPath("$.title", is("New Python")))
-                .andExpect(jsonPath("$.content", is("There is a spring application released by master, it is amazing")))
-                .andExpect(jsonPath("$.tags", is(Arrays.asList("master", "spring"))))
+                .andExpect(jsonPath("$[0].title", is("New Python")))
+                .andExpect(jsonPath("$[0].content", is("There is a spring application released by master, it is amazing")))
+                .andExpect(jsonPath("$[0].tags", is(Arrays.asList("master", "spring"))))
                 .andExpect(status().isOk());
     }
 
@@ -126,7 +132,6 @@ public class ArticlesControllerTest {
 
         mockMvc.perform(get("/articles"))
                 .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[0].title", is("New Python")))
                 .andExpect(jsonPath("$..title", is(List.of("New Python", "New Rails"))))
                 .andExpect(jsonPath("$..content", is(List.of("There is a Python application released by master, it is amazing", "There is a Rails application released by master, it is amazing"))))
                 .andExpect(jsonPath("$..tags", is(List.of(List.of("master", "Python"), List.of("master", "Rails")))))
@@ -134,7 +139,41 @@ public class ArticlesControllerTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    public void shouldGetRequestedSpecificArticle() throws Exception {
+
+        String requestBody1 = "{\n" +
+                "  \"title\": \"New Python\",\n" +
+                "  \"content\": \"There is a Python application released by master, it is amazing\",\n" +
+                "  \"tags\": [\"master\", \"Rails\"]\n" +
+                "}";
+        MockHttpServletRequestBuilder request = post("/articles")
+                .content(requestBody1)
+                .contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(request)
+                .andExpect(status().isNoContent());
+
+        String requestBody2 = "{\n" +
+                "  \"title\": \"New Rails\",\n" +
+                "  \"content\": \"There is a Rails application released by master, it is amazing\",\n" +
+                "  \"tags\": [\"master\", \"Rails\"]\n" +
+                "}";
+
+        mockMvc.perform(post("/articles")
+                .content(requestBody2)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isNoContent());
 
 
+        mockMvc.perform(get("/articles?tag=Rails"))
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].title", is("New Python")))
+                .andExpect(jsonPath("$[1].title", is("New Rails")))
+                .andExpect(jsonPath("$..content", is(List.of("There is a Python application released by master, it is amazing", "There is a Rails application released by master, it is amazing"))))
+                .andExpect(jsonPath("$..tags", is(List.of(List.of("master", "Rails"), List.of("master", "Rails")))))
+                .andDo(print())
+                .andExpect(status().isOk());
 
+    }
 }
