@@ -20,8 +20,4 @@ public class ArticlesDB {
     public void addArticle(Article article) {
         this.articles.add(article);
     }
-
-    public void emptyArticles() {
-        this.articles = new ArrayList<>();
-    }
 }
